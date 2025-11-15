@@ -7,6 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.sessions import router as sessions_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -48,6 +50,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(sessions_router)
 
 
 @app.get("/")
