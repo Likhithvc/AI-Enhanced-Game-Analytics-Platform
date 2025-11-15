@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.sessions import router as sessions_router
+from app.api.events import router as events_router
 
 # Configure logging
 logging.basicConfig(
@@ -53,6 +54,7 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(sessions_router)
+app.include_router(events_router)
 
 
 @app.get("/")
