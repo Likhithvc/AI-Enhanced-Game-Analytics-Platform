@@ -8,9 +8,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert
 
 from app.db import get_db
-from app.models import Session, Event
+from app.models import Session, Event, Leaderboard
 from app.schemas import SessionStart, SessionEnd, SessionResponse, SessionSummary
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
@@ -120,6 +121,11 @@ async def end_session(
     )
     event_count = event_count_result.scalar() or 0
     
+    # Update leaderboard with session score (on-write aggregation)
+    final_score = session_end_data.final_score or 0
+    if final_score > 0:
+        await _update_leaderboard(db, session.user_id, final_score, end_time)
+    
     try:
         await db.commit()
         await db.refresh(session)
@@ -177,3 +183,47 @@ async def get_session(
         )
     
     return session
+
+
+async def _update_leaderboard(
+    db: AsyncSession,
+    user_id: UUID,
+    score: int,
+    last_played: datetime
+) -> None:
+    """
+    Update leaderboard statistics for a user using UPSERT logic.
+    
+    This is an on-write aggregation that updates leaderboard stats
+    whenever a session ends with a score.
+    
+    Args:
+        db: Database session
+        user_id: UUID of the user
+        score: Score from the completed session
+        last_played: Timestamp of the last game played
+    """
+    # PostgreSQL UPSERT using INSERT ... ON CONFLICT
+    stmt = insert(Leaderboard).values(
+        user_id=user_id,
+        best_score=score,
+        games_played=1,
+        total_score=score,
+        avg_score=score,
+        last_played=last_played
+    )
+    
+    # On conflict, update the statistics
+    stmt = stmt.on_conflict_do_update(
+        index_elements=['user_id'],
+        set_={
+            'games_played': Leaderboard.games_played + 1,
+            'total_score': Leaderboard.total_score + score,
+            'avg_score': (Leaderboard.total_score + score) / (Leaderboard.games_played + 1),
+            'best_score': func.greatest(Leaderboard.best_score, score),
+            'last_played': last_played,
+            'updated_at': func.now()
+        }
+    )
+    
+    await db.execute(stmt)

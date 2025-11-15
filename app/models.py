@@ -164,3 +164,46 @@ class Event(Base):
 
     def __repr__(self) -> str:
         return f"<Event(id={self.id}, type={self.event_type}, name={self.event_name})>"
+
+
+class Leaderboard(Base):
+    """
+    Leaderboard model for aggregated user statistics and rankings.
+    """
+    __tablename__ = "leaderboard"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True
+    )
+    
+    best_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
+    games_played: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    avg_score: Mapped[float] = mapped_column(Integer, default=0, nullable=False)
+    
+    last_played: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False
+    )
+    
+    # Relationship
+    user: Mapped["User"] = relationship("User")
+
+    def __repr__(self) -> str:
+        return f"<Leaderboard(user_id={self.user_id}, best_score={self.best_score}, games={self.games_played})>"
