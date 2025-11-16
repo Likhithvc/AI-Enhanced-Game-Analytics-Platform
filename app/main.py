@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.sessions import router as sessions_router
 from app.api.events import router as events_router
 from app.api.leaderboard import router as leaderboard_router
+from app.api.analytics import router as analytics_router
+from app.api.heatmap_api import router as heatmap_router
 
 # Configure logging
 logging.basicConfig(
@@ -57,6 +59,8 @@ app.add_middleware(
 app.include_router(sessions_router)
 app.include_router(events_router)
 app.include_router(leaderboard_router)
+app.include_router(analytics_router)
+app.include_router(heatmap_router)
 
 
 @app.get("/")
