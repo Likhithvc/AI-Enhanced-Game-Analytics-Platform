@@ -12,6 +12,8 @@ from app.api.events import router as events_router
 from app.api.leaderboard import router as leaderboard_router
 from app.api.analytics import router as analytics_router
 from app.api.heatmap_api import router as heatmap_router
+from app.api.admin import router as admin_router
+from app.jobs import create_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -30,11 +32,20 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Game Analytics API server...")
     logger.info("Service: game-analytics")
     logger.info("Environment: development")
+    scheduler = create_scheduler()
+    scheduler.start()
+    app.state.scheduler = scheduler
     
     yield
     
     # Shutdown
     logger.info("⏹️  Shutting down Game Analytics API server...")
+    try:
+        scheduler = getattr(app.state, "scheduler", None)
+        if scheduler:
+            scheduler.shutdown(wait=False)
+    except Exception:
+        pass
     logger.info("Cleanup completed successfully")
 
 
@@ -61,6 +72,7 @@ app.include_router(events_router)
 app.include_router(leaderboard_router)
 app.include_router(analytics_router)
 app.include_router(heatmap_router)
+app.include_router(admin_router)
 
 
 @app.get("/")
