@@ -11,10 +11,28 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gameanalytics-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gameanalytics"]
       interval: 10s
       timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: gameanalytics-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gameanalytics-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
       retries: 5
 
   backend:
@@ -25,17 +43,27 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+asyncpg://gameanalytics:password@db:5432/gameanalytics_db
+      REDIS_URL: redis://redis:6379/0
       SECRET_KEY: dev-secret-key-change-in-production
       DEBUG: "True"
       ENVIRONMENT: development
+      ETL_INTERVAL_MINUTES: "15"
+      HEATMAP_INTERVAL_MINUTES: "30"
+      HEATMAP_LEVELS: "1,2,3"
+      ADMIN_API_KEY: dev-admin-key
     ports:
       - "8000:8000"
     volumes:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+      - ./scripts:/app/scripts
+    networks:
+      - gameanalytics-network
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: >
       sh -c "alembic upgrade head && 
@@ -54,9 +82,16 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+    networks:
+      - gameanalytics-network
     depends_on:
       - backend
     command: npm run dev -- --host
 
 volumes:
   postgres_data:
+  redis_data:
+
+networks:
+  gameanalytics-network:
+    driver: bridge

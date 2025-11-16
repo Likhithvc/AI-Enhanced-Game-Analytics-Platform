@@ -24,7 +24,8 @@ Game Analytics provides real-time insights into player engagement, retention met
 ### Infrastructure
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
-- **Nginx** - Reverse proxy and static file serving
+- **Redis** - In-memory cache and job queue backend
+- **Nginx** - Reverse proxy and static file serving (production)
 
 ## Architecture
 
@@ -33,6 +34,7 @@ The application follows a three-tier architecture:
 1. **Frontend Layer**: React SPA that communicates with the backend via REST API
 2. **Backend Layer**: FastAPI application handling business logic, data processing, and API endpoints
 3. **Data Layer**: PostgreSQL database storing analytics events, user data, and aggregated metrics
+4. **Cache Layer**: Redis for job queuing and caching
 
 ```
 ┌─────────────────┐
@@ -41,10 +43,10 @@ The application follows a three-tier architecture:
 └────────┬────────┘
          │ HTTP/REST
          ▼
-┌─────────────────┐
-│  FastAPI Backend│
-│   (Port 8000)   │
-└────────┬────────┘
+┌─────────────────┐       ┌─────────────────┐
+│  FastAPI Backend│◄─────►│     Redis       │
+│   (Port 8000)   │       │   (Port 6379)   │
+└────────┬────────┘       └─────────────────┘
          │ SQLAlchemy
          ▼
 ┌─────────────────┐
@@ -80,15 +82,24 @@ The application follows a three-tier architecture:
    POSTGRES_DB=gameanalytics_db
    
    # Backend
-   DATABASE_URL=postgresql://gameanalytics:your_secure_password@db:5432/gameanalytics_db
+   DATABASE_URL=postgresql+asyncpg://gameanalytics:your_secure_password@db:5432/gameanalytics_db
+   REDIS_URL=redis://redis:6379/0
    SECRET_KEY=your_secret_key_here
+   ADMIN_API_KEY=your_admin_api_key
+   ETL_INTERVAL_MINUTES=15
+   HEATMAP_INTERVAL_MINUTES=30
+   HEATMAP_LEVELS=1,2,3
    
    # Frontend
    VITE_API_URL=http://localhost:8000
    ```
 
-3. **Start the application with Docker Compose**
+3. **Start all services**
    ```bash
+   # Using make (recommended)
+   make dev
+   
+   # Or using docker-compose directly
    docker-compose up --build
    ```
 
@@ -96,17 +107,55 @@ The application follows a three-tier architecture:
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+   - Redis: localhost:6379
 
 ### Running Individual Services
 
-**Backend only:**
+**Backend + Database + Redis:**
 ```bash
-docker-compose up backend db
+docker-compose up backend db redis
 ```
 
 **Frontend only:**
 ```bash
 docker-compose up frontend
+```
+
+### Quick Commands (Make)
+
+**Linux/Mac:**
+```bash
+# Start all services in development mode
+make dev
+
+# Stop all services
+make down
+
+# View logs
+make logs
+
+# Restart services
+make restart
+
+# Clean up (remove containers and volumes)
+make clean
+
+# Run database migrations
+make migrate
+
+# Trigger background jobs manually
+make run-jobs
+```
+
+**Windows (PowerShell):**
+```powershell
+# If make is not installed, use the PowerShell wrapper
+.\dev.ps1 dev        # Start all services
+.\dev.ps1 down       # Stop all services
+.\dev.ps1 logs       # View logs
+.\dev.ps1 clean      # Clean up
+.\dev.ps1 migrate    # Run migrations
+.\dev.ps1 run-jobs   # Trigger jobs
 ```
 
 ### Database Migrations
