@@ -40,19 +40,84 @@ export class FlappyBirdGame {
   init() {
     this.canvas.width = 800;
     this.canvas.height = 600;
+    this.createBirdSprite();
     this.reset();
     this.setupControls();
   }
+
+  createBirdSprite() {
+    // Create a simple pixel art bird sprite
+    const size = 30;
+    const spriteCanvas = document.createElement('canvas');
+    spriteCanvas.width = size;
+    spriteCanvas.height = size;
+    const ctx = spriteCanvas.getContext('2d');
+
+    // Bird pixel art (yellow bird with orange beak and black eye)
+    const pixels = [
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '00000000YYYYYY0000000000000000',
+      '000000YYYYYYYYYYYY0000000000',
+      '0000YYYYYYYYYYYYYYY000000000',
+      '000YYYYYBYYYYYYYYYYY00000000',
+      '00YYYYYYYYYYYYYYYYYY00000000',
+      '0YYYYYYYYYYYYYYYYYYYOOO00000',
+      '0YYYYYYYYYYYYYYYYYYYOOO00000',
+      'YYYYYYYYYYYYYYYYYYYYYY000000',
+      'YYYYYYYYYYYYYYYYYYYYYY000000',
+      'YYYYYYYYYYYYYYYYYYYYYY000000',
+      '0YYYYYYYYYYYYYYYYYYYYYY00000',
+      '0YYYYYYYYYYYYYYYYYYYYYY00000',
+      '00YYYYYYYYYYYYYYYYYYY000000',
+      '000YYYYYYYYYYYYYYYYYY000000',
+      '0000YYYYYYYYYYYYYY0000000000',
+      '00000YYYYYYYYYYYY00000000000',
+      '000000YYYYYYYYYY000000000000',
+      '00000000YYYYYY00000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000',
+      '000000000000000000000000000000'
+    ];
+
+    const pixelSize = 1;
+    for (let y = 0; y < pixels.length; y++) {
+      for (let x = 0; x < pixels[y].length; x++) {
+        const char = pixels[y][x];
+        if (char === 'Y') {
+          ctx.fillStyle = '#FFD700'; // Gold yellow
+        } else if (char === 'B') {
+          ctx.fillStyle = '#000'; // Black eye
+        } else if (char === 'O') {
+          ctx.fillStyle = '#FF8C00'; // Orange beak
+        } else {
+          continue;
+        }
+        ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+      }
+    }
+
+    this.birdSprite = spriteCanvas;
+  }
   
   setupControls() {
-    // Space bar and click to jump
-    document.addEventListener('keydown', (e) => {
+    // Store bound handlers for proper cleanup
+    this.keydownHandler = (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
         this.handleJump();
       }
-    });
+    };
     
+    // Add event listeners
+    document.addEventListener('keydown', this.keydownHandler);
     this.canvas.addEventListener('click', this.handleJump);
   }
   
@@ -76,17 +141,23 @@ export class FlappyBirdGame {
   }
   
   restart() {
-    this.reset();
-    this.start();
+    // Only restart if game is actually over
+    if (this.gameOver) {
+      this.reset();
+      this.start();
+    }
   }
   
   reset() {
-    this.gameOver = false;
-    this.score = 0;
-    this.frameCount = 0;
-    this.bird.y = 200;
-    this.bird.velocity = 0;
-    this.pipes = [];
+    // Defensive: only reset if game is not actively running
+    if (!this.isRunning || this.gameOver) {
+      this.gameOver = false;
+      this.score = 0;
+      this.frameCount = 0;
+      this.bird.y = 200;
+      this.bird.velocity = 0;
+      this.pipes = [];
+    }
   }
   
   update() {
@@ -95,6 +166,15 @@ export class FlappyBirdGame {
     // Update bird physics
     this.bird.velocity += this.bird.gravity;
     this.bird.y += this.bird.velocity;
+    
+    // Track bird position every 30 frames (~0.5 seconds at 60fps)
+    if (this.frameCount % 30 === 0) {
+      this.onEvent('position', 'player_position', {
+        x: Math.round(this.bird.x),
+        y: Math.round(this.bird.y),
+        level: '1'  // Set level for heatmap tracking
+      });
+    }
     
     // Generate pipes
     this.frameCount++;
@@ -193,9 +273,13 @@ export class FlappyBirdGame {
       this.ctx.fillRect(pipe.x, pipe.bottomY, this.pipeWidth, this.canvas.height - pipe.bottomY);
     });
     
-    // Draw bird
-    this.ctx.fillStyle = '#FFD700';
-    this.ctx.fillRect(this.bird.x, this.bird.y, this.bird.width, this.bird.height);
+    // Draw bird sprite
+    if (this.birdSprite) {
+      this.ctx.drawImage(this.birdSprite, this.bird.x, this.bird.y, this.bird.width, this.bird.height);
+    } else {
+      this.ctx.fillStyle = '#FFD700';
+      this.ctx.fillRect(this.bird.x, this.bird.y, this.bird.width, this.bird.height);
+    }
     
     // Draw score
     this.ctx.fillStyle = '#000';
@@ -238,7 +322,14 @@ export class FlappyBirdGame {
   
   destroy() {
     this.isRunning = false;
-    document.removeEventListener('keydown', this.handleJump);
-    this.canvas.removeEventListener('click', this.handleJump);
+    this.gameOver = true;
+    
+    // Remove event listeners using stored handlers
+    if (this.keydownHandler) {
+      document.removeEventListener('keydown', this.keydownHandler);
+    }
+    if (this.canvas) {
+      this.canvas.removeEventListener('click', this.handleJump);
+    }
   }
 }

@@ -27,6 +27,7 @@ class User(Base):
     )
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(100))
     meta: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     

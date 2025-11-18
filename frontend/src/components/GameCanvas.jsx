@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FlappyBirdGame } from '../game/FlappyBird';
 import analytics from '../services/analytics';
 
@@ -16,56 +16,53 @@ const GameCanvas = () => {
     return id;
   });
 
+  const handleGameEvent = useCallback((eventType, eventName, payload) => {
+    // Track game events through analytics service
+    analytics.trackEvent(eventType, eventName, payload);
+  }, []);
+
   useEffect(() => {
+    console.log('[GameCanvas] Initializing game...');
+    
     // Set user ID in analytics
     analytics.setUserId(userId);
 
     // Initialize game
     const canvas = canvasRef.current;
+    if (!canvas) {
+      console.error('[GameCanvas] Canvas ref not available');
+      return;
+    }
+    
     const game = new FlappyBirdGame(canvas, handleGameEvent);
     game.init();
     gameRef.current = game;
 
     // Start analytics session
+    const startSession = async () => {
+      await analytics.startSession({
+        game_name: 'flappy-analytics',
+        browser: navigator.userAgent
+      });
+      setSessionActive(true);
+    };
+
     startSession();
 
     // Cleanup
     return () => {
+      console.log('[GameCanvas] Cleaning up game...');
       if (gameRef.current) {
+        const finalScore = gameRef.current.score || 0;
         gameRef.current.destroy();
+        gameRef.current = null;
+        
+        // End session on cleanup
+        analytics.endSession(finalScore).catch(console.error);
+        setSessionActive(false);
       }
-      endSession();
     };
-  }, [userId]);
-
-  const startSession = async () => {
-    await analytics.startSession({
-      game_name: 'flappy-analytics',
-      browser: navigator.userAgent
-    });
-    setSessionActive(true);
-  };
-
-  const endSession = async () => {
-    if (sessionActive) {
-      const finalScore = gameRef.current?.score || 0;
-      await analytics.endSession(finalScore);
-      setSessionActive(false);
-    }
-  };
-
-  const handleGameEvent = (eventType, eventName, payload) => {
-    // Track game events through analytics service
-    analytics.trackEvent(eventType, eventName, payload);
-
-    // Handle game over to end session
-    if (eventType === 'collision' && eventName === 'game_over') {
-      setTimeout(async () => {
-        await endSession();
-        await startSession();
-      }, 100);
-    }
-  };
+  }, [userId, handleGameEvent]);
 
   return (
     <div style={styles.container}>

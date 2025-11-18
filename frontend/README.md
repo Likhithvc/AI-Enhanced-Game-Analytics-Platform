@@ -85,7 +85,12 @@ frontend/
 ## How It Works
 
 1. **User ID Generation**: Each player gets a unique UUID stored in localStorage
-2. **Session Management**: Sessions are created via `/api/v1/sessions/start`
+2. **Session Management**: Sessions are created via `/api/v1/sessions/start` (protected endpoint). The frontend reads `localStorage.access_token` and sends it as `Authorization: Bearer <token>` if present. To test easily during local development, you can place the JWT returned from `/api/v1/auth/login` in `localStorage` via the browser console:
+
+```js
+localStorage.setItem('access_token', 'eyJhbGciOiJIUzI1NiI...')
+```
+Then reload the page; the app will include the token in protected requests.
 3. **Event Batching**: Events are queued and sent in batches to optimize network requests
 4. **Session End**: When game ends, session is closed via `/api/v1/sessions/end`
 

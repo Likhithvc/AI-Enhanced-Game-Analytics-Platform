@@ -12,7 +12,11 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.db import get_db
 from app.models import Session, Event, Leaderboard
+
+
 from app.schemas import SessionStart, SessionEnd, SessionResponse, SessionSummary
+from app.metrics import inc_sessions
+from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
 
@@ -20,7 +24,8 @@ router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
 @router.post("/start", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def start_session(
     session_data: SessionStart,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user)
 ):
     """
     Start a new game session.
@@ -57,13 +62,15 @@ async def start_session(
             detail=f"Failed to create session. User may not exist. Error: {str(e)}"
         )
     
+    inc_sessions(1)
     return new_session
 
 
 @router.post("/end", response_model=SessionSummary)
 async def end_session(
     session_end_data: SessionEnd,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user)
 ):
     """
     End an existing game session.

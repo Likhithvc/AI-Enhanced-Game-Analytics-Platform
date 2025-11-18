@@ -8,9 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
+
 from app.db import get_db
 from app.models import Event
 from app.schemas import EventCreate, EventResponse
+
+from app.auth import get_current_active_user
+from app.metrics import inc_events
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
@@ -38,7 +42,8 @@ class BulkEventResponse(BaseModel):
 @router.post("", response_model=BulkEventResponse, status_code=status.HTTP_201_CREATED)
 async def create_events(
     bulk_data: BulkEventCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_active_user)
 ):
     """
     Create multiple events in a single transaction (bulk insert).
@@ -82,12 +87,11 @@ async def create_events(
         try:
             db.add_all(valid_events)
             await db.commit()
-            
             # Refresh to get generated IDs
             for event in valid_events:
                 await db.refresh(event)
                 inserted_event_ids.append(event.id)
-                
+            inc_events(len(valid_events))
         except Exception as e:
             await db.rollback()
             raise HTTPException(

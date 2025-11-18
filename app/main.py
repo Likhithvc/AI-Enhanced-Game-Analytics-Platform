@@ -1,8 +1,10 @@
 """
 FastAPI application entry point for Game Analytics platform.
 """
+
 import logging
 from contextlib import asynccontextmanager
+from app.logging_config import setup_structured_logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,13 +15,17 @@ from app.api.leaderboard import router as leaderboard_router
 from app.api.analytics import router as analytics_router
 from app.api.heatmap_api import router as heatmap_router
 from app.api.admin import router as admin_router
+
 from app.jobs import create_scheduler
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+from app.api.auth import router as auth_router
+
+from app.metrics import router as metrics_router
+from app.api.exports import router as exports_router
+
+
+# Configure structured logging
+setup_structured_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -67,6 +73,11 @@ app.add_middleware(
 )
 
 # Include API routers
+
+
+app.include_router(metrics_router)
+app.include_router(exports_router)
+app.include_router(auth_router)
 app.include_router(sessions_router)
 app.include_router(events_router)
 app.include_router(leaderboard_router)
