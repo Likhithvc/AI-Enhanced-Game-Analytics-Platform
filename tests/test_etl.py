@@ -1,6 +1,6 @@
-import pytest
 import pandas as pd
 from scripts.etl_aggregate import compute_aggregate
+
 
 def test_etl_aggregate_small_dataset():
     df = pd.DataFrame([
