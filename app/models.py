@@ -29,6 +29,7 @@ class User(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(100))
+    highest_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     meta: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     
     created_at: Mapped[datetime] = mapped_column(

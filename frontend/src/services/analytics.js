@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { getAuthHeaders } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const BATCH_SIZE = 5;
@@ -85,12 +86,9 @@ class AnalyticsService {
     this.eventQueue = [];
 
     try {
-      // include Authorization header if token is stored
-      const token = localStorage.getItem('access_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(`${API_URL}/api/v1/events`, {
         events: eventsToSend
-      }, { headers });
+      }, { headers: getAuthHeaders() });
       
       console.log(`Analytics: Sent ${eventsToSend.length} events`, response.data);
       return response.data;
@@ -111,8 +109,6 @@ class AnalyticsService {
     }
 
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(`${API_URL}/api/v1/sessions/start`, {
         user_id: this.userId,
         device_info: {
@@ -123,7 +119,7 @@ class AnalyticsService {
         },
         platform: 'web',
         game_version: '1.0.0'
-      }, { headers });
+      }, { headers: getAuthHeaders() });
 
       this.sessionId = response.data.id;
       console.log('Analytics: Session started', this.sessionId);
@@ -158,12 +154,10 @@ class AnalyticsService {
     await this.flush();
 
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post(`${API_URL}/api/v1/sessions/end`, {
         session_id: this.sessionId,
         final_score: finalScore
-      }, { headers });
+      }, { headers: getAuthHeaders() });
 
       console.log('Analytics: Session ended', response.data);
       this.sessionId = null;

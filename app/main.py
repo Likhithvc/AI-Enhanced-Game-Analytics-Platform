@@ -18,7 +18,8 @@ from app.api.admin import router as admin_router
 
 from app.jobs import create_scheduler
 
-from app.api.auth import router as auth_router
+from app.routes.auth import router as auth_router
+from app.routes.scores import router as scores_router
 
 from app.metrics import router as metrics_router
 from app.api.exports import router as exports_router
@@ -77,7 +78,8 @@ app.add_middleware(
 
 app.include_router(metrics_router)
 app.include_router(exports_router)
-app.include_router(auth_router)
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(scores_router, prefix="/api/v1")
 app.include_router(sessions_router)
 app.include_router(events_router)
 app.include_router(leaderboard_router)

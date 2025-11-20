@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FlappyBirdGame } from '../game/FlappyBird';
 import analytics from '../services/analytics';
+import { submitScore } from '../services/api';
+import { isAuthenticated } from '../services/auth';
 
 const GameCanvas = () => {
   const canvasRef = useRef(null);
@@ -19,7 +21,38 @@ const GameCanvas = () => {
   const handleGameEvent = useCallback((eventType, eventName, payload) => {
     // Track game events through analytics service
     analytics.trackEvent(eventType, eventName, payload);
+    
+    // Handle game over event to submit score
+    if (eventName === 'game_over' && payload.final_score !== undefined) {
+      handleGameOver(payload.final_score);
+    }
   }, []);
+
+  const handleGameOver = async (finalScore) => {
+    console.log('[GameCanvas] Game Over - Final Score:', finalScore);
+    
+    // Only submit score if user is authenticated
+    if (!isAuthenticated()) {
+      console.log('[GameCanvas] User not authenticated, skipping score submission');
+      return;
+    }
+
+    try {
+      const result = await submitScore(finalScore);
+      
+      if (result.new_record) {
+        console.log(`🎉 NEW RECORD! Highest score: ${result.highest_score}`);
+        // You could show a toast/notification here
+      } else {
+        console.log(`Final score: ${finalScore}, Highest score: ${result.highest_score}`);
+      }
+    } catch (error) {
+      console.error('[GameCanvas] Failed to submit score:', error);
+      if (error.response?.status === 401) {
+        console.log('[GameCanvas] Authentication required for score submission');
+      }
+    }
+  };
 
   useEffect(() => {
     console.log('[GameCanvas] Initializing game...');
