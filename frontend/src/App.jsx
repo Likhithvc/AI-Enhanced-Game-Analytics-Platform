@@ -99,7 +99,7 @@ function App() {
 
       <div style={styles.content}>
         {view === 'game' && <GameCanvas />}
-        {view === 'dashboard' && <Dashboard />}
+        {view === 'dashboard' && <Dashboard currentUser={currentUser} />}
         {view === 'leaderboard' && <Leaderboard currentUsername={currentUser?.username} />}
       </div>
     </div>

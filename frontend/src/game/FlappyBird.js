@@ -2,11 +2,16 @@
  * Flappy Bird Game Logic (Plain JavaScript)
  */
 
+import { SoundManager } from './SoundManager';
+
 export class FlappyBirdGame {
   constructor(canvas, onEvent) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.onEvent = onEvent || (() => {});
+    
+    // Initialize sound manager
+    this.soundManager = new SoundManager();
     
     // Game state
     this.isRunning = false;
@@ -38,11 +43,24 @@ export class FlappyBirdGame {
   }
   
   init() {
-    this.canvas.width = 800;
-    this.canvas.height = 600;
+    // Set canvas size - larger and more prominent
+    const maxWidth = 700;
+    const maxHeight = 550;
+    
+    // Calculate size based on viewport with larger dimensions
+    const viewportWidth = Math.min(window.innerWidth - 60, maxWidth);
+    const viewportHeight = Math.min(window.innerHeight * 0.65, maxHeight);
+    
+    // Use aspect ratio of 1.27:1 (width:height)
+    this.canvas.width = Math.min(viewportWidth, viewportHeight * 1.27);
+    this.canvas.height = this.canvas.width / 1.27;
+    
     this.createBirdSprite();
     this.reset();
     this.setupControls();
+    
+    // Play start sound
+    this.soundManager.playStart();
   }
 
   createBirdSprite() {
@@ -145,6 +163,8 @@ export class FlappyBirdGame {
     if (this.gameOver) {
       this.reset();
       this.start();
+      // Play start sound on restart
+      this.soundManager.playStart();
     }
   }
   
@@ -203,6 +223,8 @@ export class FlappyBirdGame {
       
       // Check collision
       if (this.checkCollision(this.pipes[i])) {
+        // Play crash sound
+        this.soundManager.playCrash();
         this.endGame();
         return;
       }
@@ -211,6 +233,10 @@ export class FlappyBirdGame {
       if (!this.pipes[i].scored && this.pipes[i].x + this.pipeWidth < this.bird.x) {
         this.pipes[i].scored = true;
         this.score++;
+        
+        // Play score sound
+        this.soundManager.playScore();
+        
         this.onEvent('score', 'score_update', {
           score: this.score,
           pipe_passed: i
@@ -220,6 +246,8 @@ export class FlappyBirdGame {
     
     // Check boundaries
     if (this.bird.y + this.bird.height > this.canvas.height || this.bird.y < 0) {
+      // Play crash sound for boundary collision
+      this.soundManager.playCrash();
       this.endGame();
     }
   }
@@ -281,11 +309,6 @@ export class FlappyBirdGame {
       this.ctx.fillRect(this.bird.x, this.bird.y, this.bird.width, this.bird.height);
     }
     
-    // Draw score
-    this.ctx.fillStyle = '#000';
-    this.ctx.font = '32px Arial';
-    this.ctx.fillText(`Score: ${this.score}`, 10, 40);
-    
     // Draw instructions
     if (!this.isRunning && !this.gameOver) {
       this.ctx.fillStyle = '#000';
@@ -293,22 +316,7 @@ export class FlappyBirdGame {
       this.ctx.fillText('Press SPACE or Click to Start', 200, 300);
     }
     
-    // Draw game over
-    if (this.gameOver) {
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-      
-      this.ctx.fillStyle = '#FFF';
-      this.ctx.font = '48px Arial';
-      this.ctx.fillText('Game Over!', 250, 250);
-      
-      this.ctx.font = '32px Arial';
-      this.ctx.fillText(`Score: ${this.score}`, 300, 300);
-      this.ctx.fillText(`High Score: ${this.highScore}`, 250, 350);
-      
-      this.ctx.font = '24px Arial';
-      this.ctx.fillText('Click to Restart', 280, 400);
-    }
+    // Game over state is handled by React overlay - no canvas drawing needed
   }
   
   gameLoop() {

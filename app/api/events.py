@@ -13,7 +13,7 @@ from app.db import get_db
 from app.models import Event
 from app.schemas import EventCreate, EventResponse
 
-from app.auth import get_current_active_user
+from app.jwt import get_current_user
 from app.metrics import inc_events
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
@@ -43,7 +43,7 @@ class BulkEventResponse(BaseModel):
 async def create_events(
     bulk_data: BulkEventCreate,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user)
+    current_user=Depends(get_current_user)
 ):
     """
     Create multiple events in a single transaction (bulk insert).

@@ -7,7 +7,11 @@ import { isAuthenticated } from '../services/auth';
 const GameCanvas = () => {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
+  const gameOverRef = useRef(false);
   const [sessionActive, setSessionActive] = useState(false);
+  const [currentScore, setCurrentScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
   const [userId] = useState(() => {
     // Get or create user ID from localStorage
     let id = localStorage.getItem('game_user_id');
@@ -22,8 +26,21 @@ const GameCanvas = () => {
     // Track game events through analytics service
     analytics.trackEvent(eventType, eventName, payload);
     
+    // Update score display during gameplay
+    if (eventName === 'score_update' && payload.score !== undefined) {
+      setCurrentScore(payload.score);
+    }
+    
     // Handle game over event to submit score
     if (eventName === 'game_over' && payload.final_score !== undefined) {
+      gameOverRef.current = true;
+      setCurrentScore(payload.final_score);
+      if (payload.high_score !== undefined) {
+        setHighScore(payload.high_score);
+      }
+      setIsGameOver(true);
+      // Flush any pending events immediately when game ends
+      analytics.flush();
       handleGameOver(payload.final_score);
     }
   }, []);
@@ -67,6 +84,22 @@ const GameCanvas = () => {
       return;
     }
     
+    // Add click and keydown handlers to dismiss game over before game processes it
+    const handleInteraction = (e) => {
+      if (gameOverRef.current) {
+        // Prevent the event from reaching the game if game is over
+        if (e.type === 'keydown' && (e.key === ' ' || e.code === 'Space')) {
+          e.preventDefault();
+        }
+        gameOverRef.current = false;
+        setIsGameOver(false);
+        setCurrentScore(0);
+      }
+    };
+    
+    canvas.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction, true); // Use capture phase
+    
     const game = new FlappyBirdGame(canvas, handleGameEvent);
     game.init();
     gameRef.current = game;
@@ -85,6 +118,9 @@ const GameCanvas = () => {
     // Cleanup
     return () => {
       console.log('[GameCanvas] Cleaning up game...');
+      canvas.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction, true);
+      
       if (gameRef.current) {
         const finalScore = gameRef.current.score || 0;
         gameRef.current.destroy();
@@ -99,51 +135,55 @@ const GameCanvas = () => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>🎮 Flappy Analytics</h1>
-        <p style={styles.subtitle}>
-          Real-time game analytics demo with FastAPI + React
-        </p>
-      </div>
-      
-      <div style={styles.gameContainer}>
-        <canvas
-          ref={canvasRef}
-          style={styles.canvas}
-        />
-      </div>
-
-      <div style={styles.info}>
-        <div style={styles.infoCard}>
-          <h3>Controls</h3>
-          <p>🖱️ Click or Press SPACE to jump</p>
+      <div style={styles.mainContent}>
+        <div style={styles.header}>
+          <div style={styles.titleRow}>
+            <h1 style={styles.title}>🎮 Flappy Analytics</h1>
+            <div style={styles.scoreBoard}>
+              <div style={styles.scoreItem}>
+                <div style={styles.scoreLabel}>Score</div>
+                <div style={styles.scoreValue}>{currentScore}</div>
+              </div>
+              <div style={styles.scoreItem}>
+                <div style={styles.scoreLabel}>Best</div>
+                <div style={styles.scoreValue}>{highScore}</div>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div style={styles.infoCard}>
-          <h3>Analytics Events</h3>
-          <ul style={styles.list}>
-            <li>✅ Session Start</li>
-            <li>🦅 Jump Events</li>
-            <li>📊 Score Updates</li>
-            <li>💥 Collisions</li>
-            <li>🏁 Session End</li>
-          </ul>
+        <div style={styles.gameContainer}>
+          <canvas
+            ref={canvasRef}
+            style={styles.canvas}
+          />
+          {isGameOver && (
+            <div style={styles.gameOverOverlay}>
+              <div style={styles.gameOverBox}>
+                <h2 style={styles.gameOverTitle}>Game Over!</h2>
+                <div style={styles.gameOverScores}>
+                  <div style={styles.gameOverScoreItem}>
+                    <div style={styles.gameOverLabel}>Your Score</div>
+                    <div style={styles.gameOverValue}>{currentScore}</div>
+                  </div>
+                  <div style={styles.gameOverScoreItem}>
+                    <div style={styles.gameOverLabel}>Best Score</div>
+                    <div style={styles.gameOverValue}>{highScore}</div>
+                  </div>
+                </div>
+                <div style={styles.gameOverHint}>Press SPACE to play again</div>
+              </div>
+            </div>
+          )}
         </div>
-
-        <div style={styles.infoCard}>
-          <h3>Session Info</h3>
-          <p>User ID: <code style={styles.code}>{userId.substring(0, 8)}...</code></p>
-          <p>Status: <span style={{color: sessionActive ? '#4CAF50' : '#f44336'}}>
-            {sessionActive ? '🟢 Active' : '🔴 Inactive'}
-          </span></p>
+        
+        <div style={styles.footer}>
+          <div style={styles.controlHint}>🖱️ Click or ⌨️ SPACE to jump</div>
+          <div style={styles.statusBadge}>
+            <span style={{color: sessionActive ? '#4CAF50' : '#f44336'}}>●</span>
+            {sessionActive ? ' Live' : ' Offline'}
+          </div>
         </div>
-      </div>
-
-      <div style={styles.footer}>
-        <p>Events are batched and sent to <code style={styles.code}>/api/v1/events</code></p>
-        <p>Check <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" style={styles.link}>
-          API Docs
-        </a> for real-time data</p>
       </div>
     </div>
   );
@@ -152,73 +192,169 @@ const GameCanvas = () => {
 const styles = {
   container: {
     display: 'flex',
-    flexDirection: 'column',
+    justifyContent: 'center',
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0a0e27',
     color: '#eee',
-    padding: '20px',
-    fontFamily: 'Arial, sans-serif'
+    padding: '10px',
+    fontFamily: '\'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif',
+    overflow: 'hidden'
+  },
+  mainContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: '100%',
+    width: '100%',
+    maxHeight: '100vh',
+    gap: '10px'
   },
   header: {
     textAlign: 'center',
-    marginBottom: '20px'
+    width: '100%'
+  },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '15px',
+    maxWidth: '650px',
+    margin: '0 auto',
+    padding: '0 10px'
   },
   title: {
-    fontSize: '48px',
-    margin: '10px 0',
-    color: '#FFD700'
+    fontSize: 'clamp(24px, 4vw, 36px)',
+    margin: '0',
+    color: '#FFD700',
+    textShadow: '0 0 15px rgba(255, 215, 0, 0.5)',
+    fontWeight: 'bold',
+    flex: '1',
+    minWidth: '200px'
   },
-  subtitle: {
-    fontSize: '18px',
-    color: '#aaa'
+  scoreBoard: {
+    display: 'flex',
+    gap: '20px',
+    padding: '8px 20px',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: '8px',
+    border: '2px solid rgba(255, 215, 0, 0.3)'
+  },
+  scoreItem: {
+    textAlign: 'center'
+  },
+  scoreLabel: {
+    fontSize: '11px',
+    color: '#FFD700',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '2px',
+    fontWeight: '600'
+  },
+  scoreValue: {
+    fontSize: 'clamp(24px, 5vw, 32px)',
+    color: '#fff',
+    fontWeight: 'bold',
+    textShadow: '0 2px 10px rgba(255, 215, 0, 0.5)',
+    lineHeight: '1'
   },
   gameContainer: {
+    position: 'relative',
     backgroundColor: '#000',
     borderRadius: '8px',
-    padding: '10px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-    marginBottom: '30px'
+    padding: '5px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 215, 0, 0.2)',
+    border: '2px solid #1a1a2e',
+    maxWidth: '100%'
   },
   canvas: {
     display: 'block',
-    border: '2px solid #333'
-  },
-  info: {
-    display: 'flex',
-    gap: '20px',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    maxWidth: '1000px',
-    marginBottom: '20px'
-  },
-  infoCard: {
-    backgroundColor: '#16213e',
-    padding: '20px',
-    borderRadius: '8px',
-    minWidth: '200px',
-    border: '1px solid #0f3460'
-  },
-  list: {
-    listStyle: 'none',
-    padding: 0,
-    margin: '10px 0'
-  },
-  code: {
-    backgroundColor: '#0f3460',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    fontFamily: 'monospace',
-    color: '#FFD700'
+    borderRadius: '6px',
+    maxWidth: '100%',
+    height: 'auto'
   },
   footer: {
-    textAlign: 'center',
-    color: '#888',
-    fontSize: '14px'
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+    flexWrap: 'wrap'
   },
-  link: {
-    color: '#4CAF50',
-    textDecoration: 'none'
+  controlHint: {
+    fontSize: 'clamp(12px, 2vw, 14px)',
+    color: '#888',
+    padding: '6px 15px',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: '6px',
+    border: '1px solid rgba(255, 255, 255, 0.1)'
+  },
+  statusBadge: {
+    fontSize: 'clamp(12px, 2vw, 14px)',
+    color: '#aaa',
+    padding: '6px 15px',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: '6px',
+    border: '1px solid rgba(255, 255, 255, 0.1)'
+  },
+  gameOverOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '6px',
+    backdropFilter: 'blur(3px)'
+  },
+  gameOverBox: {
+    textAlign: 'center',
+    padding: '30px',
+    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+    borderRadius: '12px',
+    border: '3px solid rgba(255, 215, 0, 0.5)',
+    boxShadow: '0 10px 40px rgba(255, 215, 0, 0.3)'
+  },
+  gameOverTitle: {
+    fontSize: 'clamp(28px, 6vw, 42px)',
+    color: '#FFD700',
+    margin: '0 0 20px 0',
+    textShadow: '0 0 20px rgba(255, 215, 0, 0.8)',
+    fontWeight: 'bold'
+  },
+  gameOverScores: {
+    display: 'flex',
+    gap: '30px',
+    justifyContent: 'center',
+    marginBottom: '20px'
+  },
+  gameOverScoreItem: {
+    textAlign: 'center'
+  },
+  gameOverLabel: {
+    fontSize: 'clamp(12px, 2vw, 14px)',
+    color: '#aaa',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '8px'
+  },
+  gameOverValue: {
+    fontSize: 'clamp(32px, 8vw, 48px)',
+    color: '#fff',
+    fontWeight: 'bold',
+    textShadow: '0 2px 15px rgba(255, 215, 0, 0.6)'
+  },
+  gameOverHint: {
+    fontSize: 'clamp(12px, 2vw, 14px)',
+    color: '#888',
+    marginTop: '15px',
+    padding: '8px 15px',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: '6px'
   }
 };
 

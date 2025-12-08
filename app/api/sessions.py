@@ -16,7 +16,7 @@ from app.models import Session, Event, Leaderboard
 
 from app.schemas import SessionStart, SessionEnd, SessionResponse, SessionSummary
 from app.metrics import inc_sessions
-from app.auth import get_current_active_user
+from app.jwt import get_current_user
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
 
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/v1/sessions", tags=["sessions"])
 async def start_session(
     session_data: SessionStart,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user)
+    current_user=Depends(get_current_user)
 ):
     """
     Start a new game session.
@@ -70,7 +70,7 @@ async def start_session(
 async def end_session(
     session_end_data: SessionEnd,
     db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_active_user)
+    current_user=Depends(get_current_user)
 ):
     """
     End an existing game session.
