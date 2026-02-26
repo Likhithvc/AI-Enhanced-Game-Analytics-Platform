@@ -290,3 +290,11 @@ site/
 !requirements-dev.txt
 !package.json
 !package-lock.json
+
+# ==============================================================================
+# Debug & Utility Scripts (Root Level)
+# ==============================================================================
+
+# Database debug utilities (contain hardcoded credentials)
+check_events.py
+check_recent_events.py
