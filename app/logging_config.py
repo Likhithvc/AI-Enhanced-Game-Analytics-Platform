@@ -2,6 +2,7 @@ import logging
 import sys
 import json
 
+
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
@@ -13,6 +14,7 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             log_record['exception'] = self.formatException(record.exc_info)
         return json.dumps(log_record)
+
 
 def setup_structured_logging():
     handler = logging.StreamHandler(sys.stdout)

@@ -21,7 +21,6 @@ Assumptions:
 Provides helper function: get_heatmap(level, date) -> list[list[float]]
 """
 import os
-import json
 import argparse
 from datetime import datetime, date
 

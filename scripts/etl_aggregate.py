@@ -31,6 +31,23 @@ def get_engine():
     return create_engine(dsn, future=True)
 
 
+def compute_aggregate(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute per-session aggregates from raw event DataFrame.
+
+    Groups events by session_id and computes sums of numeric columns.
+
+    Args:
+        df: DataFrame with at least a 'session_id' column and numeric columns.
+
+    Returns:
+        DataFrame with one row per session_id, numeric columns summed.
+    """
+    if df.empty:
+        return df
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
+    return df.groupby('session_id')[numeric_cols].sum().reset_index()
+
+
 def save_session_summary(df: pd.DataFrame, engine):
     """Append session-level aggregates into leaderboard_aggregates using pandas.to_sql.
 
@@ -124,8 +141,8 @@ def main():
               .agg(
                   event_count=('event_type', 'size'),
                   max_score=('score_value', 'max'),
-              )
-              .reset_index()
+            )
+            .reset_index()
         )
     else:
         # Empty input -> empty aggregation result

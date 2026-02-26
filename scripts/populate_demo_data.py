@@ -9,7 +9,6 @@ from sqlalchemy import select
 from app.db import AsyncSessionLocal
 from app.models import User, Session, Event
 from app.auth import get_password_hash
-import uuid
 
 
 async def create_demo_data():
@@ -17,7 +16,7 @@ async def create_demo_data():
         # Get or create demo user
         result = await db.execute(select(User).where(User.username == 'demo'))
         user = result.scalars().first()
-        
+
         if not user:
             user = User(
                 username='demo',
@@ -29,9 +28,9 @@ async def create_demo_data():
             db.add(user)
             await db.commit()
             await db.refresh(user)
-        
+
         print(f"Using user: {user.username} (id={user.id})")
-        
+
         # Create 5 sample sessions over the past week
         sessions_created = []
         for i in range(5):
@@ -39,7 +38,7 @@ async def create_demo_data():
             duration = random.randint(60, 300)
             end_time = start_time + timedelta(seconds=duration)
             final_score = random.randint(10, 100)
-            
+
             session = Session(
                 user_id=user.id,
                 session_start=start_time,
@@ -52,9 +51,9 @@ async def create_demo_data():
             )
             db.add(session)
             sessions_created.append((session, final_score))
-        
+
         await db.commit()
-        
+
         # Create events for each session
         event_types = [
             ('jump', 'player_jump'),
@@ -63,15 +62,15 @@ async def create_demo_data():
             ('collision', 'pipe_collision'),
             ('position', 'player_position')  # Add position events
         ]
-        
+
         for session, final_score in sessions_created:
             await db.refresh(session)
             num_events = random.randint(20, 50)
-            
+
             for j in range(num_events):
                 event_type, event_name = random.choice(event_types)
                 timestamp = session.session_start + timedelta(seconds=random.randint(0, session.duration_seconds or 60))
-                
+
                 event = Event(
                     user_id=user.id,
                     session_id=session.id,
@@ -87,7 +86,7 @@ async def create_demo_data():
                     timestamp=timestamp
                 )
                 db.add(event)
-        
+
         await db.commit()
         print(f"Created {len(sessions_created)} sessions with events")
         print("Demo data populated successfully!")

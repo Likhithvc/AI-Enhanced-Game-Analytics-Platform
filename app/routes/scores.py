@@ -42,22 +42,22 @@ async def submit_score(
 ):
     """
     Submit a game score.
-    
+
     - Requires JWT authentication
     - Updates user's highest score if new score is greater
     - Returns current highest score and whether it's a new record
     """
     new_record = False
-    
+
     # Check if this is a new high score
     if score_data.score > current_user.highest_score:
         current_user.highest_score = score_data.score
         new_record = True
-        
+
         # Commit the update to database
         await db.commit()
         await db.refresh(current_user)
-    
+
     return ScoreResponse(
         highest_score=current_user.highest_score,
         new_record=new_record
@@ -71,7 +71,7 @@ async def get_leaderboard(
 ):
     """
     Get the top players leaderboard.
-    
+
     - No authentication required
     - Returns top players ordered by highest score (descending)
     - Configurable limit (default 10, max 100)
@@ -83,7 +83,7 @@ async def get_leaderboard(
         .limit(limit)
     )
     top_users = result.scalars().all()
-    
+
     return [
         LeaderboardEntry(username=user.username, highest_score=user.highest_score)
         for user in top_users

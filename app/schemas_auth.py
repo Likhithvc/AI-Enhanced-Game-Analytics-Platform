@@ -44,4 +44,3 @@ class TokenData(BaseModel):
 SECRET_KEY = "your-secret-key-change-this-in-production-use-openssl-rand-hex-32"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-

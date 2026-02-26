@@ -1,7 +1,7 @@
 """
 Leaderboard API endpoints.
 """
-from typing import List, Optional
+from typing import List
 from enum import Enum
 
 from fastapi import APIRouter, Depends, Query
@@ -24,7 +24,7 @@ class PeriodFilter(str, Enum):
 class LeaderboardEntry(BaseModel):
     """Leaderboard entry response model."""
     model_config = ConfigDict(from_attributes=True)
-    
+
     rank: int
     user_id: str
     username: str
@@ -42,14 +42,14 @@ async def get_leaderboard(
 ):
     """
     Get leaderboard rankings.
-    
+
     Returns top players sorted by best_score in descending order.
-    
+
     Args:
         period: Time period filter (currently only 'all' is supported)
         limit: Number of top players to return (default: 10, max: 100)
         db: Database session
-        
+
     Returns:
         List[LeaderboardEntry]: Ranked list of top players
     """
@@ -60,16 +60,16 @@ async def get_leaderboard(
         .order_by(Leaderboard.best_score.desc())
         .limit(limit)
     )
-    
+
     # Future: Add period filtering
     # if period == PeriodFilter.DAILY:
     #     query = query.where(Leaderboard.last_played >= datetime.now() - timedelta(days=1))
     # elif period == PeriodFilter.WEEKLY:
     #     query = query.where(Leaderboard.last_played >= datetime.now() - timedelta(days=7))
-    
+
     result = await db.execute(query)
     rows = result.all()
-    
+
     # Build response with rankings
     leaderboard_entries = []
     for rank, (leaderboard_entry, username) in enumerate(rows, start=1):
@@ -84,5 +84,5 @@ async def get_leaderboard(
                 total_score=leaderboard_entry.total_score
             )
         )
-    
+
     return leaderboard_entries
