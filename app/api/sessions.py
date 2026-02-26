@@ -2,7 +2,6 @@
 Session management API endpoints.
 """
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -29,14 +28,14 @@ async def start_session(
 ):
     """
     Start a new game session.
-    
+
     Args:
         session_data: Session start information including user_id and device_info
         db: Database session
-        
+
     Returns:
         SessionResponse: Created session with session_id
-        
+
     Raises:
         HTTPException: If user not found or database error
     """
@@ -49,9 +48,9 @@ async def start_session(
         meta=session_data.meta,
         session_start=datetime.utcnow()
     )
-    
+
     db.add(new_session)
-    
+
     try:
         await db.commit()
         await db.refresh(new_session)
@@ -61,7 +60,7 @@ async def start_session(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to create session. User may not exist. Error: {str(e)}"
         )
-    
+
     inc_sessions(1)
     return new_session
 
@@ -74,14 +73,14 @@ async def end_session(
 ):
     """
     End an existing game session.
-    
+
     Args:
         session_end_data: Session end information including session_id and end_time
         db: Database session
-        
+
     Returns:
         SessionSummary: Updated session with summary information
-        
+
     Raises:
         HTTPException: 404 if session not found
     """
@@ -90,49 +89,49 @@ async def end_session(
         select(Session).where(Session.id == session_end_data.session_id)
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session with id {session_end_data.session_id} not found"
         )
-    
+
     # Check if session already ended
     if session.session_end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Session {session_end_data.session_id} has already ended"
         )
-    
+
     # Update session
     end_time = session_end_data.end_time or datetime.utcnow()
     session.session_end = end_time
-    
+
     # Calculate duration in seconds
     duration = (end_time - session.session_start).total_seconds()
     session.duration_seconds = int(duration)
-    
+
     # Update metadata with final score if provided
     if session_end_data.final_score is not None:
         session.meta = session.meta or {}
         session.meta["final_score"] = session_end_data.final_score
-    
+
     # Merge additional metadata
     if session_end_data.meta:
         session.meta = session.meta or {}
         session.meta.update(session_end_data.meta)
-    
+
     # Get event count for this session
     event_count_result = await db.execute(
         select(func.count(Event.id)).where(Event.session_id == session.id)
     )
     event_count = event_count_result.scalar() or 0
-    
+
     # Update leaderboard with session score (on-write aggregation)
     final_score = session_end_data.final_score or 0
     if final_score > 0:
         await _update_leaderboard(db, session.user_id, final_score, end_time)
-    
+
     try:
         await db.commit()
         await db.refresh(session)
@@ -142,7 +141,7 @@ async def end_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update session: {str(e)}"
         )
-    
+
     # Build summary response
     summary = SessionSummary(
         id=session.id,
@@ -156,7 +155,7 @@ async def end_session(
         event_count=event_count,
         meta=session.meta
     )
-    
+
     return summary
 
 
@@ -167,14 +166,14 @@ async def get_session(
 ):
     """
     Get session details by ID.
-    
+
     Args:
         session_id: UUID of the session
         db: Database session
-        
+
     Returns:
         SessionResponse: Session details
-        
+
     Raises:
         HTTPException: 404 if session not found
     """
@@ -182,13 +181,13 @@ async def get_session(
         select(Session).where(Session.id == session_id)
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Session with id {session_id} not found"
         )
-    
+
     return session
 
 
@@ -200,10 +199,10 @@ async def _update_leaderboard(
 ) -> None:
     """
     Update leaderboard statistics for a user using UPSERT logic.
-    
+
     This is an on-write aggregation that updates leaderboard stats
     whenever a session ends with a score.
-    
+
     Args:
         db: Database session
         user_id: UUID of the user
@@ -219,7 +218,7 @@ async def _update_leaderboard(
         avg_score=score,
         last_played=last_played
     )
-    
+
     # On conflict, update the statistics
     stmt = stmt.on_conflict_do_update(
         index_elements=['user_id'],
@@ -232,5 +231,5 @@ async def _update_leaderboard(
             'updated_at': func.now()
         }
     )
-    
+
     await db.execute(stmt)

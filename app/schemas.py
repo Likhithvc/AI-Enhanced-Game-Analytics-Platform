@@ -21,7 +21,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     created_at: datetime
     updated_at: datetime
@@ -46,7 +46,7 @@ class SessionEnd(BaseModel):
 
 class SessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     session_start: datetime
@@ -62,7 +62,7 @@ class SessionResponse(BaseModel):
 
 class SessionSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     session_start: datetime
@@ -88,7 +88,7 @@ class EventCreate(BaseModel):
 
 class EventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     session_id: Optional[UUID] = None

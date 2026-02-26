@@ -62,5 +62,11 @@ def create_scheduler() -> AsyncIOScheduler:
     heatmap_minutes = int(os.getenv("HEATMAP_INTERVAL_MINUTES", "30"))
 
     scheduler.add_job(run_etl_job, IntervalTrigger(minutes=etl_minutes), id="etl-job", max_instances=1, coalesce=True)
-    scheduler.add_job(run_heatmap_job, IntervalTrigger(minutes=heatmap_minutes), id="heatmap-job", max_instances=1, coalesce=True)
+    scheduler.add_job(
+        run_heatmap_job,
+        IntervalTrigger(
+            minutes=heatmap_minutes),
+        id="heatmap-job",
+        max_instances=1,
+        coalesce=True)
     return scheduler

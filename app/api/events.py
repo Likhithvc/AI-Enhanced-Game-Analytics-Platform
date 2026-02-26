@@ -1,7 +1,7 @@
 """
 Event tracking API endpoints.
 """
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -47,17 +47,17 @@ async def create_events(
 ):
     """
     Create multiple events in a single transaction (bulk insert).
-    
+
     Args:
         bulk_data: Bulk event creation data containing array of events
         db: Database session
-        
+
     Returns:
         BulkEventResponse: Summary with inserted count and validation errors
     """
     validation_errors = []
     valid_events = []
-    
+
     # Validate and prepare events
     for index, event_data in enumerate(bulk_data.events):
         try:
@@ -80,7 +80,7 @@ async def create_events(
                     error=str(e)
                 )
             )
-    
+
     # Bulk insert valid events in a single transaction
     inserted_event_ids = []
     if valid_events:
@@ -98,7 +98,7 @@ async def create_events(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to insert events: {str(e)}"
             )
-    
+
     return BulkEventResponse(
         inserted_count=len(valid_events),
         total_count=len(bulk_data.events),
@@ -114,30 +114,30 @@ async def get_event(
 ):
     """
     Get event details by ID.
-    
+
     Args:
         event_id: UUID of the event
         db: Database session
-        
+
     Returns:
         EventResponse: Event details
-        
+
     Raises:
         HTTPException: 404 if event not found
     """
     from sqlalchemy import select
-    
+
     result = await db.execute(
         select(Event).where(Event.id == event_id)
     )
     event = result.scalar_one_or_none()
-    
+
     if not event:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Event with id {event_id} not found"
         )
-    
+
     return event
 
 
@@ -150,18 +150,18 @@ async def get_session_events(
 ):
     """
     Get all events for a specific session.
-    
+
     Args:
         session_id: UUID of the session
         limit: Maximum number of events to return
         offset: Number of events to skip
         db: Database session
-        
+
     Returns:
         List[EventResponse]: List of events for the session
     """
     from sqlalchemy import select
-    
+
     result = await db.execute(
         select(Event)
         .where(Event.session_id == session_id)
@@ -170,7 +170,7 @@ async def get_session_events(
         .offset(offset)
     )
     events = result.scalars().all()
-    
+
     return events
 
 
@@ -183,18 +183,18 @@ async def get_user_events(
 ):
     """
     Get all events for a specific user.
-    
+
     Args:
         user_id: UUID of the user
         limit: Maximum number of events to return
         offset: Number of events to skip
         db: Database session
-        
+
     Returns:
         List[EventResponse]: List of events for the user
     """
     from sqlalchemy import select
-    
+
     result = await db.execute(
         select(Event)
         .where(Event.user_id == user_id)
@@ -203,5 +203,5 @@ async def get_user_events(
         .offset(offset)
     )
     events = result.scalars().all()
-    
+
     return events

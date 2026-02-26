@@ -10,6 +10,7 @@ from app.models import Session
 
 router = APIRouter(prefix="/api/v1/exports", tags=["exports"])
 
+
 @router.get("", response_class=Response)
 async def export_sessions(
     from_: Optional[str] = Query(None, alias="from", description="Start ISO date (YYYY-MM-DD)"),
@@ -49,4 +50,5 @@ async def export_sessions(
     buf = io.BytesIO()
     df.to_parquet(buf, index=False)
     buf.seek(0)
-    return Response(content=buf.read(), media_type="application/octet-stream", headers={"Content-Disposition": "attachment; filename=sessions_export.parquet"})
+    return Response(content=buf.read(), media_type="application/octet-stream",
+                    headers={"Content-Disposition": "attachment; filename=sessions_export.parquet"})

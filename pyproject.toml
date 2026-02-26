@@ -78,4 +78,5 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+pythonpath = ["."]
 addopts = "--cov=app --cov-report=html --cov-report=term-missing"

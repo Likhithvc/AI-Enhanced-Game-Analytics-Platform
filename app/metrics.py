@@ -8,15 +8,18 @@ router = APIRouter()
 events_received_total = 0
 sessions_created_total = 0
 
+
 def inc_events(n=1):
     global events_received_total
     events_received_total += n
     logging.getLogger("metrics").info(f"events_received_total incremented by {n}")
 
+
 def inc_sessions(n=1):
     global sessions_created_total
     sessions_created_total += n
     logging.getLogger("metrics").info(f"sessions_created_total incremented by {n}")
+
 
 @router.get("/metrics", response_class=PlainTextResponse)
 def metrics():

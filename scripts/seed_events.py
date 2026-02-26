@@ -98,7 +98,7 @@ def main():
 
         conn.commit()
         print(f"Seeded user={user_id}, session={session_id}, events={len(events)}")
-    except Exception as e:
+    except Exception:
         conn.rollback()
         raise
     finally:

@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Text, Integer, ForeignKey, JSON
+from sqlalchemy import String, Integer, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -31,7 +31,7 @@ class User(Base):
     display_name: Mapped[Optional[str]] = mapped_column(String(100))
     highest_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     meta: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
-    
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
@@ -44,7 +44,7 @@ class User(Base):
         nullable=False
     )
     last_login: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    
+
     # Relationships
     sessions: Mapped[list["Session"]] = relationship(
         "Session",
@@ -79,20 +79,20 @@ class Session(Base):
         nullable=False,
         index=True
     )
-    
+
     session_start: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False
     )
     session_end: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
-    
+
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer)
     game_version: Mapped[Optional[str]] = mapped_column(String(50))
     platform: Mapped[Optional[str]] = mapped_column(String(50))
     device_info: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     meta: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
-    
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
@@ -104,7 +104,7 @@ class Session(Base):
         onupdate=func.now(),
         nullable=False
     )
-    
+
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="sessions")
     events: Mapped[list["Event"]] = relationship(
@@ -140,26 +140,26 @@ class Event(Base):
         ForeignKey("sessions.id", ondelete="CASCADE"),
         index=True
     )
-    
+
     event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     event_name: Mapped[str] = mapped_column(String(255), nullable=False)
     event_category: Mapped[Optional[str]] = mapped_column(String(100), index=True)
-    
+
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    
+
     timestamp: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False,
         index=True
     )
-    
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False
     )
-    
+
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="events")
     session: Mapped[Optional["Session"]] = relationship("Session", back_populates="events")
@@ -180,18 +180,18 @@ class Leaderboard(Base):
         primary_key=True,
         index=True
     )
-    
+
     best_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     games_played: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     avg_score: Mapped[float] = mapped_column(Integer, default=0, nullable=False)
-    
+
     last_played: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
         nullable=False
     )
-    
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
@@ -203,7 +203,7 @@ class Leaderboard(Base):
         onupdate=func.now(),
         nullable=False
     )
-    
+
     # Relationship
     user: Mapped["User"] = relationship("User")
 

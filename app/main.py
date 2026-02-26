@@ -42,9 +42,9 @@ async def lifespan(app: FastAPI):
     scheduler = create_scheduler()
     scheduler.start()
     app.state.scheduler = scheduler
-    
+
     yield
-    
+
     # Shutdown
     logger.info("⏹️  Shutting down Game Analytics API server...")
     try:
@@ -92,7 +92,7 @@ app.include_router(admin_router)
 async def root():
     """
     Root endpoint to verify API is running.
-    
+
     Returns:
         dict: Status and service information
     """
@@ -106,7 +106,7 @@ async def root():
 async def health_check():
     """
     Health check endpoint for monitoring and load balancers.
-    
+
     Returns:
         dict: Health status information
     """
@@ -119,7 +119,7 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
