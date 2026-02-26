@@ -1,3 +1,8 @@
+# 🎮 Flappy Analytics - Game Analytics Platform
+
+> A full-stack real-time game analytics platform featuring a Flappy Bird game with comprehensive event tracking, data pipelines, and interactive dashboards.
+
+
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
@@ -8,9 +13,6 @@
   <img src="https://img.shields.io/badge/NumPy-1.26-013243?style=for-the-badge&logo=numpy&logoColor=white" alt="NumPy">
 </p>
 
-# 🎮 Flappy Analytics - Game Analytics Platform
-
-> A full-stack real-time game analytics platform featuring a Flappy Bird game with comprehensive event tracking, data pipelines, and interactive dashboards.
 
 <p align="center">
   <strong>📊 Track Every Event • 🔥 Visualize Heatmaps • 🏆 Compete on Leaderboards</strong>
